@@ -32,6 +32,10 @@ bool toggleLED = false;
 bool toggleVIB = false;
 bool isPlaying = true;
 
+int prevLedFrequency = -1;
+int prevBuzzerFrequency = -1;
+int prevVibFrequency = -1;
+
 
 bool lastBTState = LOW;  // 上一次蓝牙状态
 
@@ -64,10 +68,15 @@ void loop() {
 
   if (Bluetooth.available()) {
     String received_string = "";
+    // end line check
     while (Bluetooth.available()) {
-      char c = (char)Bluetooth.read();
+      char c = Bluetooth.read();
+      if (c == '#') {
+        break;
+      } else {
       received_string += c;
       delay(10);
+      }
     }
     // 将接收到的字符串分割为三个数字
     parseReceivedData(received_string);
@@ -76,9 +85,22 @@ void loop() {
     isPlaying = true; // 在接收到新数据时重置为播放状态
   }
 if (isPlaying && isValidFrequency(ledFrequency) && isValidFrequency(buzzerFrequency) && isValidFrequency(vibFrequency)) {
-  blinkLEDs();
-  playMelody();
-  vibrateMotor();
+  if (prevLedFrequency != ledFrequency || prevBuzzerFrequency != buzzerFrequency || prevVibFrequency != vibFrequency ) {
+    stopAll();
+  }
+  if (ledFrequency > 0) {
+    blinkLEDs();
+    }
+  if (buzzerFrequency > 0) {
+    playMelody();
+    }
+  if (vibFrequency > 0) {
+    vibrateMotor();
+    }
+  prevLedFrequency = ledFrequency;
+  prevBuzzerFrequency = buzzerFrequency;
+  prevVibFrequency = vibFrequency;
+  delay(400);     // Minimum runtime
 } else {
   stopAll();
 }
@@ -87,7 +109,7 @@ if (isPlaying && isValidFrequency(ledFrequency) && isValidFrequency(buzzerFreque
 
 }
 bool isValidFrequency(int frequency) {
-  return frequency >= 1 && frequency <= 8;
+  return frequency >= 0 && frequency <= 8;
 }
 
 void parseReceivedData(String data) {
@@ -96,8 +118,11 @@ void parseReceivedData(String data) {
 
   // 提取并转换数字
   ledFrequency = data.substring(0, firstCommaIndex).toInt();
+  Serial.println(ledFrequency);
   buzzerFrequency = data.substring(firstCommaIndex + 1, secondCommaIndex).toInt();
+  Serial.println(buzzerFrequency);
   vibFrequency = data.substring(secondCommaIndex + 1).toInt();
+  Serial.println(vibFrequency);
 }
 
 void blinkLEDs() {
