@@ -39,6 +39,9 @@ int prevBuzzerFrequency = -1;
 int prevVibFrequency = -1;
 int power = 0;
 
+unsigned long elseStartTime = 0;
+bool isElseActive = false;
+
 
 bool lastBTState = LOW;  // 上一次蓝牙状态
 
@@ -89,7 +92,21 @@ void loop() {
     parseReceivedData(received_string);
     Serial.println("DATA RECEIVED:");
     Serial.println(received_string);
-    isPlaying = true;  // 在接收到新数据时重置为播放状态
+    isPlaying = true; // 在接收到新数据时重置为播放状态
+    isElseActive = false;
+    elseStartTime = 0;
+  } else {
+    if (!isElseActive) {
+        // else active, record the start time
+        elseStartTime = millis();
+        isElseActive = true;
+    } else if (millis() - elseStartTime > 7000) { // Check if 7 seconds have passed
+        Serial.println("zero");
+        ledFrequency = 0;
+        buzzerFrequency = 0;
+        vibFrequency = 0;
+        elseStartTime = millis();
+    }
   }
   if (isPlaying && isValidFrequency(ledFrequency) && isValidFrequency(buzzerFrequency) && isValidFrequency(vibFrequency)) {
     if (prevLedFrequency != ledFrequency || prevBuzzerFrequency != buzzerFrequency || prevVibFrequency != vibFrequency) {
@@ -126,11 +143,11 @@ void parseReceivedData(String data) {
 
   // 提取并转换数字
   ledFrequency = data.substring(0, firstCommaIndex).toInt();
-  Serial.println(ledFrequency);
+  // Serial.println(ledFrequency);
   buzzerFrequency = data.substring(firstCommaIndex + 1, secondCommaIndex).toInt();
-  Serial.println(buzzerFrequency);
+  // Serial.println(buzzerFrequency);
   vibFrequency = data.substring(secondCommaIndex + 1).toInt();
-  Serial.println(vibFrequency);
+  // Serial.println(vibFrequency);
 }
 
 void blinkLEDs() {
